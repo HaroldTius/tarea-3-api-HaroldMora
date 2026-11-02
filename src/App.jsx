@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import './index.css';
 
 function App() {
   const [pokemons, setPokemons] = useState([]);
+  const [selectedPokemon, setSelectedPokemon] = useState(null);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -19,19 +22,58 @@ function App() {
     fetchData();
   }, []);
 
+  const openModal = async (poke) => {
+    setSelectedPokemon(poke);
+    setDescription("Procesando datos...");
+    try {
+      const res = await fetch(poke.species.url);
+      const data = await res.json();
+      // Filtramos para buscar el texto en español
+      const textEntry = data.flavor_text_entries.find(entry => entry.language.name === 'es');
+      setDescription(textEntry ? textEntry.flavor_text.replace(/\f/g, ' ') : "Sin registro.");
+    } catch (error) {
+      setDescription("Error de red Porygon.");
+    }
+  };
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#1a1a1a', color: 'white', minHeight: '100vh' }}>
-      <h1 style={{ textAlign: 'center' }}>Pokedex - Tarea 3</h1>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
+    <div>
+      <header className="header">
+        <h1 style={{ fontSize: '24px' }}>POKÉDEX NACIONAL</h1>
+      </header>
+
+      <main className="grid">
         {pokemons.map((poke) => (
-          <div key={poke.id} style={{ border: '1px solid #444', padding: '15px', borderRadius: '10px', textAlign: 'center', backgroundColor: '#2a2a2a', width: '200px' }}>
-            <img src={poke.sprites.front_default} alt={poke.name} width="120" />
-            <h3 style={{ textTransform: 'capitalize', margin: '10px 0' }}>{poke.name}</h3>
-            <p style={{ margin: '5px 0' }}><strong>Peso:</strong> {poke.weight} hg</p>
-            <p style={{ margin: '5px 0' }}><strong>Tipo:</strong> {poke.types[0].type.name}</p>
+          <div key={poke.id} className="card" onClick={() => openModal(poke)}>
+            <img src={poke.sprites.front_default} alt={poke.name} />
+            <h3 style={{ textTransform: 'uppercase', fontSize: '12px', margin: '15px 0' }}>{poke.name}</h3>
+            <p style={{ fontSize: '10px', color: '#4b5563' }}>Nº {poke.id.toString().padStart(3, '0')}</p>
           </div>
         ))}
-      </div>
+      </main>
+
+      {/* Renderizado condicional del Modal */}
+      {selectedPokemon && (
+        <div className="modal-overlay" onClick={() => setSelectedPokemon(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn" onClick={() => setSelectedPokemon(null)}>X</button>
+            <h2 style={{ textTransform: 'uppercase', color: '#ef4444', fontSize: '20px' }}>{selectedPokemon.name}</h2>
+            <img 
+              src={selectedPokemon.sprites.other['official-artwork'].front_default || selectedPokemon.sprites.front_default} 
+              alt={selectedPokemon.name} 
+              style={{ width: '180px', margin: '10px 0' }} 
+            />
+            <div style={{ fontSize: '11px', lineHeight: '2', textAlign: 'left', marginTop: '15px', color: '#1f2937' }}>
+              <p><strong>Tipo:</strong> {selectedPokemon.types.map(t => t.type.name).join(', ')}</p>
+              <p><strong>Peso:</strong> {selectedPokemon.weight / 10} kg</p>
+              <p><strong>Altura:</strong> {selectedPokemon.height / 10} m</p>
+              <p style={{ marginTop: '15px', borderTop: '2px dashed #9ca3af', paddingTop: '15px' }}>
+                <strong>INFO:</strong> {description}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
